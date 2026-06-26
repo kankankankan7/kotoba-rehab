@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ことばのリハビリ</title>
+<!-- iPad/iPhoneでホーム画面に追加したとき、全画面の「アプリ風」に開く設定 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ことばのリハビリ">
+<meta name="theme-color" content="#fbf7ef">
+<style>
+  :root{
+    --bg:#fbf7ef;          /* やさしいクリーム色（まぶしくない） */
+    --card:#ffffff;
+    --ink:#1c1c1c;         /* ほぼ黒・高コントラスト */
+    --accent:#1565c0;      /* はっきりした青 */
+    --accent-dark:#0d47a1;
+    --good:#2e7d32;        /* 正解の緑 */
+    --good-bg:#d7f0d8;
+    --retry:#e8a000;       /* もう一度の黄 */
+    --retry-bg:#fff3d6;
+    --line:#d8d2c4;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Hiragino Maru Gothic ProN","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif;
+    font-weight:700;
+    -webkit-font-smoothing:antialiased;
+    -webkit-text-size-adjust:100%;   /* iPadで文字が勝手に拡大されないように */
+    min-height:100vh;
+    /* iPadでホーム画面アプリにした時、ノッチ等を避ける余白 */
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* ===== ヘッダー ===== */
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px;
+    background:var(--card);
+    border-bottom:4px solid var(--line);
+    position:sticky; top:0; z-index:10;
+  }
+  header .title{font-size:32px; color:var(--accent-dark); white-space:nowrap;}
+  @media(max-width:720px){ header .title{font-size:26px;} }
+  header .tools{display:flex; gap:12px;}
+  .iconbtn{
+    font-size:26px; padding:12px 18px; border:3px solid var(--line);
+    background:#fff; border-radius:16px; cursor:pointer; font-weight:700;
+    min-height:60px; white-space:nowrap;
+  }
+  .iconbtn:active{transform:scale(.97);}
+
+  main{max-width:1100px; margin:0 auto; padding:24px 18px 80px;}
+
+  /* ===== ホーム ===== */
+  .lead{font-size:32px; text-align:center; margin:10px 0 30px; line-height:1.6; color:#444;}
+  .modes{display:grid; grid-template-columns:repeat(2,1fr); gap:22px;}
+  @media(max-width:720px){.modes{grid-template-columns:1fr;}}
+  .mode{
+    background:var(--card); border:4px solid var(--line); border-radius:26px;
+    padding:30px 26px; cursor:pointer; text-align:left;
+    display:flex; align-items:center; gap:22px; transition:.15s;
+  }
+  .mode:active{transform:scale(.98);}
+  .mode:hover{border-color:var(--accent);}
+  .mode .emo{font-size:68px; line-height:1;}
+  .mode .lv{font-size:24px; color:var(--accent); margin-bottom:4px;}
+  .mode .nm{font-size:40px;}
+  .mode .ds{font-size:24px; color:#555; font-weight:400; margin-top:8px; line-height:1.5;}
+
+  .addrow{display:flex; gap:16px; justify-content:center; margin-top:28px; flex-wrap:wrap;}
+  .addbtn{
+    font-size:27px; padding:20px 30px; border-radius:18px; cursor:pointer;
+    border:3px dashed var(--accent); background:#eef4fc; color:var(--accent-dark);
+    font-weight:700; min-height:70px;
+  }
+  .addbtn:active{transform:scale(.98);}
+
+  /* ===== カテゴリ選択 ===== */
+  .cats{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:10px;}
+  @media(max-width:720px){.cats{grid-template-columns:repeat(2,1fr);}}
+  .cat{
+    background:var(--card); border:4px solid var(--line); border-radius:22px;
+    padding:24px 12px; cursor:pointer; text-align:center;
+  }
+  .cat:active{transform:scale(.97);}
+  .cat .emo{font-size:60px;}
+  .cat .nm{font-size:30px; margin-top:8px;}
+  .cat .ct{font-size:21px; color:#888; font-weight:400; margin-top:4px;}
+  .cat.disabled{opacity:.45; cursor:not-allowed;}
+
+  /* ===== 絵・写真の共通表示 ===== */
+  .emo-char{line-height:1;}
+  .pic{object-fit:cover; border-radius:16px; display:block;}
+
+  /* ===== トレーニング画面 ===== */
+  .stage{display:none;}
+  .stage.on{display:block;}
+  .prompt{
+    text-align:center; background:var(--card); border:4px solid var(--line);
+    border-radius:24px; padding:26px 20px; margin-bottom:22px;
+  }
+  .prompt .say{font-size:32px; color:#555; margin-bottom:10px;}
+  .prompt .word{font-size:80px; color:var(--accent-dark);}
+
+  .bigvisual{text-align:center; margin:6px 0 18px; min-height:180px;
+    display:flex; align-items:center; justify-content:center;}
+  .bigvisual .emo-char{font-size:170px;}
+  .bigvisual .pic{max-height:300px; max-width:90%; border-radius:24px;}
+  @media(max-width:720px){
+    .bigvisual .emo-char{font-size:130px;}
+    .bigvisual .pic{max-height:230px;}
+  }
+
+  .speakbtn{
+    display:block; margin:0 auto 22px; font-size:36px; padding:24px 44px;
+    background:var(--accent); color:#fff; border:none; border-radius:20px;
+    cursor:pointer; min-height:84px; box-shadow:0 5px 0 var(--accent-dark);
+  }
+  .speakbtn:active{transform:translateY(4px); box-shadow:0 1px 0 var(--accent-dark);}
+
+  /* 選択肢グリッド */
+  .choices{display:grid; gap:20px;}
+  .choices.c2{grid-template-columns:repeat(2,1fr);}
+  .choices.c3{grid-template-columns:repeat(3,1fr);}
+  .choices.c4{grid-template-columns:repeat(2,1fr);}
+  .choice{
+    background:var(--card); border:5px solid var(--line); border-radius:24px;
+    padding:24px 10px; cursor:pointer; text-align:center; transition:.12s;
+  }
+  .choice:active{transform:scale(.97);}
+  .choice .visual{height:130px; display:flex; align-items:center; justify-content:center;}
+  .choice .visual .emo-char{font-size:96px;}
+  .choice .visual .pic{max-height:130px; max-width:100%;}
+  @media(max-width:720px){
+    .choice .visual{height:100px;}
+    .choice .visual .emo-char{font-size:72px;}
+    .choice .visual .pic{max-height:100px;}
+  }
+  .choice .lbl{font-size:34px; margin-top:10px;}
+  .choice.correct{border-color:var(--good); background:var(--good-bg);}
+  .choice.wrong{border-color:var(--retry); background:var(--retry-bg); opacity:.85;}
+
+  /* フィードバック */
+  .feedback{
+    text-align:center; font-size:50px; margin:24px 0; min-height:56px; display:none;
+  }
+  .feedback.good{color:var(--good); display:block;}
+  .feedback.retry{color:var(--retry); display:block;}
+
+  /* 呼称モードのヒント */
+  .hints{display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-top:10px;}
+  @media(max-width:720px){.hints{grid-template-columns:1fr;}}
+  .hint{
+    font-size:30px; padding:22px; border:4px solid var(--accent); color:var(--accent-dark);
+    background:#eef4fc; border-radius:20px; cursor:pointer; text-align:center; min-height:84px;
+  }
+  .hint:active{transform:scale(.98);}
+  .hintbox{
+    display:none; background:var(--retry-bg); border:4px solid var(--retry);
+    border-radius:20px; padding:24px; font-size:36px; text-align:center; margin-top:18px; line-height:1.5;
+  }
+  .hintbox.on{display:block;}
+  .answer{
+    display:none; text-align:center; margin-top:18px; font-size:68px; color:var(--good);
+  }
+  .answer.on{display:block;}
+
+  .navrow{display:flex; gap:16px; justify-content:center; margin-top:34px; flex-wrap:wrap;}
+  .navbtn{
+    font-size:32px; padding:22px 40px; border-radius:20px; cursor:pointer; border:none;
+    min-height:84px; font-weight:700;
+  }
+  .navbtn.next{background:var(--good); color:#fff; box-shadow:0 5px 0 #1b5e20;}
+  .navbtn.next:active{transform:translateY(4px); box-shadow:0 1px 0 #1b5e20;}
+  .navbtn.ghost{background:#fff; border:3px solid var(--line); color:#444;}
+
+  .counter{text-align:center; font-size:27px; color:#777; margin-top:8px;}
+
+  /* ===== 写真ついか画面 ===== */
+  .form{max-width:560px; margin:0 auto;}
+  .form .field{margin-bottom:24px;}
+  .form label{display:block; font-size:27px; margin-bottom:10px;}
+  .form input[type=text]{
+    width:100%; font-size:30px; padding:18px; border:3px solid var(--line);
+    border-radius:16px; font-weight:700; font-family:inherit;
+  }
+  .filewrap{position:relative;}
+  .filewrap input[type=file]{position:absolute; inset:0; opacity:0; cursor:pointer;}
+  .filefake{
+    border:3px dashed var(--accent); background:#eef4fc; border-radius:18px;
+    padding:28px; text-align:center; font-size:28px; color:var(--accent-dark);
+  }
+  #photoPreview{display:none; margin:14px auto 0; max-height:220px; border-radius:18px;}
+  .selrow{display:flex; gap:10px; flex-wrap:wrap;}
+  .selrow button{
+    font-size:24px; padding:16px 20px; border:3px solid var(--line); background:#fff;
+    border-radius:14px; cursor:pointer; font-weight:700;
+  }
+  .selrow button.sel{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .savebtn{
+    width:100%; font-size:30px; padding:22px; background:var(--good); color:#fff;
+    border:none; border-radius:18px; cursor:pointer; margin-top:6px;
+  }
+  .savebtn:disabled{opacity:.4; cursor:not-allowed;}
+
+  /* 管理リスト */
+  .mlist{max-width:640px; margin:0 auto; display:grid; gap:14px;}
+  .mitem{
+    display:flex; align-items:center; gap:18px; background:#fff;
+    border:3px solid var(--line); border-radius:18px; padding:14px 18px;
+  }
+  .mitem img{width:90px; height:90px; object-fit:cover; border-radius:12px;}
+  .mitem .minfo{flex:1;}
+  .mitem .mw{font-size:32px;}
+  .mitem .mc{font-size:22px; color:#888; font-weight:400;}
+  .mitem .del{
+    font-size:24px; padding:16px 20px; border:3px solid #c62828; color:#c62828;
+    background:#fff; border-radius:14px; cursor:pointer; font-weight:700;
+  }
+
+  /* ===== 設定パネル ===== */
+  .panel{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .panel.on{display:flex;}
+  .panel .inner{
+    background:#fff; border-radius:24px; padding:30px; max-width:480px; width:100%;
+  }
+  .panel h2{font-size:34px; margin:0 0 22px;}
+  .setrow{margin-bottom:26px;}
+  .setrow .q{font-size:28px; margin-bottom:12px;}
+  .seg{display:flex; gap:10px;}
+  .seg button{
+    flex:1; font-size:26px; padding:18px 0; border:3px solid var(--line);
+    background:#fff; border-radius:16px; cursor:pointer; font-weight:700;
+  }
+  .seg button.sel{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .closebtn{
+    width:100%; font-size:29px; padding:20px; background:var(--accent); color:#fff;
+    border:none; border-radius:18px; cursor:pointer; margin-top:6px;
+  }
+  .disclaimer{
+    max-width:760px; margin:48px auto 0; padding:18px 20px;
+    font-size:16px; font-weight:400; line-height:1.7; color:#8a8275;
+    border-top:2px solid var(--line); text-align:center;
+  }
+  .hide{display:none !important;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">🗣️ ことばのリハビリ</div>
+  <div class="tools">
+    <button class="iconbtn" id="homeBtn">🏠 さいしょ</button>
+    <button class="iconbtn" id="setBtn">⚙️ せってい</button>
+  </div>
+</header>
+
+<main>
+  <!-- ===== ホーム（モード選択） ===== -->
+  <section id="home">
+    <p class="lead">今日やることを、ひとつ えらんでください</p>
+    <div class="modes">
+      <button class="mode" data-mode="point">
+        <span class="emo">👉</span>
+        <span>
+          <div class="lv">ステップ1</div>
+          <div class="nm">ゆびさし</div>
+          <div class="ds">きこえた ことばの 絵を タッチします。まずは ここから。</div>
+        </span>
+      </button>
+      <button class="mode" data-mode="match">
+        <span class="emo">🔡</span>
+        <span>
+          <div class="lv">ステップ2</div>
+          <div class="nm">文字とえ あわせ</div>
+          <div class="ds">文字を 見て、おなじ ものの 絵を えらびます。</div>
+        </span>
+      </button>
+      <button class="mode" data-mode="repeat">
+        <span class="emo">👂</span>
+        <span>
+          <div class="lv">ステップ3</div>
+          <div class="nm">まねして いう</div>
+          <div class="ds">絵と ことばを 見て、いっしょに 声に だします。</div>
+        </span>
+      </button>
+      <button class="mode" data-mode="name">
+        <span class="emo">💬</span>
+        <span>
+          <div class="lv">ステップ4</div>
+          <div class="nm">名前を いう</div>
+          <div class="ds">絵を 見て 名前を いいます。むずかしい時は ヒントが でます。</div>
+        </span>
+      </button>
+    </div>
+
+    <div class="addrow">
+      <button class="addbtn" id="addPhotoBtn">📷 じぶんの 写真を ついか</button>
+      <button class="addbtn" id="manageBtn">🗂️ ついかした 写真を かんり</button>
+    </div>
+  </section>
+
+  <!-- ===== カテゴリ選択 ===== -->
+  <section id="catsel" class="hide">
+    <p class="lead" id="catLead">どの なかまで れんしゅう しますか？</p>
+    <div class="cats" id="catGrid"></div>
+    <div class="navrow"><button class="navbtn ghost" onclick="goHome()">← もどる</button></div>
+  </section>
+
+  <!-- ===== ゆびさし / 文字あわせ ===== -->
+  <section id="choiceStage" class="stage">
+    <div class="prompt">
+      <div class="say" id="cpSay">この ことばは どれ？</div>
+      <div class="word" id="cpWord"></div>
+    </div>
+    <button class="speakbtn" id="cpSpeak">🔊 もういちど きく</button>
+    <div class="choices" id="cpChoices"></div>
+    <div class="feedback" id="cpFb"></div>
+    <div class="counter" id="cpCount"></div>
+    <div class="navrow">
+      <button class="navbtn ghost" onclick="goHome()">🏠 さいしょへ</button>
+      <button class="navbtn next hide" id="cpNext">つぎへ →</button>
+    </div>
+  </section>
+
+  <!-- ===== まねしていう（復唱） ===== -->
+  <section id="repeatStage" class="stage">
+    <div class="bigvisual" id="rpEmo"></div>
+    <div class="prompt">
+      <div class="say">いっしょに いってみましょう</div>
+      <div class="word" id="rpWord"></div>
+    </div>
+    <button class="speakbtn" id="rpSpeak">🔊 きく</button>
+    <div class="counter" id="rpCount"></div>
+    <div class="navrow">
+      <button class="navbtn ghost" onclick="goHome()">🏠 さいしょへ</button>
+      <button class="navbtn next" id="rpNext">つぎへ →</button>
+    </div>
+  </section>
+
+  <!-- ===== 名前をいう（呼称） ===== -->
+  <section id="nameStage" class="stage">
+    <div class="bigvisual" id="nmEmo"></div>
+    <div class="prompt">
+      <div class="say">これは なんですか？ 名前を いってみましょう</div>
+    </div>
+    <div class="answer" id="nmAnswer"></div>
+    <div class="hintbox" id="nmHintbox"></div>
+    <div class="hints">
+      <button class="hint" data-h="1">💡 ヒント1：なかま</button>
+      <button class="hint" data-h="2">💡 ヒント2：さいしょの音</button>
+      <button class="hint" data-h="3">💡 ヒント3：文字を みる</button>
+      <button class="hint" data-h="ans">🔊 こたえを きく</button>
+    </div>
+    <div class="counter" id="nmCount"></div>
+    <div class="navrow">
+      <button class="navbtn ghost" onclick="goHome()">🏠 さいしょへ</button>
+      <button class="navbtn next" id="nmNext">つぎへ →</button>
+    </div>
+  </section>
+
+  <!-- ===== 写真をついか ===== -->
+  <section id="addStage" class="stage">
+    <div class="form">
+      <div class="field">
+        <label>① 写真を えらぶ（パソコンの中から）</label>
+        <div class="filewrap">
+          <div class="filefake" id="fileFake">📷 ここを おして 写真を えらぶ</div>
+          <input type="file" id="photoInput" accept="image/*">
+        </div>
+        <img id="photoPreview" alt="">
+      </div>
+      <div class="field">
+        <label>② 名前（ひらがな・カタカナ）　れい：おとうさん</label>
+        <input type="text" id="photoName" placeholder="名前を 入力">
+      </div>
+      <div class="field">
+        <label>③ なかま を えらぶ</label>
+        <div class="selrow" id="catPick"></div>
+      </div>
+      <button class="savebtn" id="savedPhoto" disabled>＋ ついかする</button>
+    </div>
+    <div class="navrow">
+      <button class="navbtn ghost" onclick="goHome()">🏠 さいしょへ</button>
+    </div>
+  </section>
+
+  <!-- ===== ついかした写真の管理 ===== -->
+  <section id="manageStage" class="stage">
+    <p class="lead" id="manageLead">ついかした 写真</p>
+    <div class="mlist" id="mList"></div>
+    <div class="navrow">
+      <button class="navbtn ghost" onclick="goHome()">🏠 さいしょへ</button>
+      <button class="navbtn ghost" id="addMoreBtn">📷 もっと ついか</button>
+    </div>
+  </section>
+
+  <!-- ===== 免責（共有版むけ） ===== -->
+  <footer class="disclaimer">
+    このアプリは ことばの れんしゅうを たすける ための もので、医療機器・診断ツールではありません。
+    リハビリの すすめ方は、担当の 言語聴覚士（ST）や 医師に ご相談ください。<br>
+    入力した 写真や 名前は、お使いの 端末の 中だけに 保存され、外部には 送信されません。
+  </footer>
+</main>
+
+<!-- ===== 設定パネル ===== -->
+<div class="panel" id="panel">
+  <div class="inner">
+    <h2>⚙️ せってい</h2>
+    <div class="setrow">
+      <div class="q">えらぶ 絵の かず</div>
+      <div class="seg" id="segCount">
+        <button data-v="2">2つ</button>
+        <button data-v="3">3つ</button>
+        <button data-v="4">4つ</button>
+      </div>
+    </div>
+    <div class="setrow">
+      <div class="q">えらぶ絵に 文字を つける</div>
+      <div class="seg" id="segLabel">
+        <button data-v="on">つける</button>
+        <button data-v="off">つけない</button>
+      </div>
+    </div>
+    <div class="setrow">
+      <div class="q">声の はやさ</div>
+      <div class="seg" id="segRate">
+        <button data-v="0.7">ゆっくり</button>
+        <button data-v="0.85">ふつう</button>
+        <button data-v="1">はやめ</button>
+      </div>
+    </div>
+    <div class="setrow">
+      <div class="q">文字の 大きさ</div>
+      <div class="seg" id="segFont">
+        <button data-v="1">ふつう</button>
+        <button data-v="1.2">大きい</button>
+        <button data-v="1.4">とても大きい</button>
+      </div>
+    </div>
+    <button class="closebtn" onclick="closePanel()">とじる</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   ことばのリハビリ  —  単一ファイルで動く言語訓練アプリ
+   ・絵は絵文字。さらに「自分の写真」を取り込んで使えます。
+   ・写真はパソコン内(localStorage)に保存。外部には送りません。
+   ・音声は Web Speech API（日本語）。PCのブラウザで動きます。
+   ========================================================= */
+
+/* ---- 基本の単語データ（カテゴリごと） ---- */
+const BASE_CATEGORIES = [
+  { id:"shokki", name:"食器・身のまわり", emo:"🍽️", words:[
+      {w:"おさら", r:"おさら", e:"🍽️", cat:"食器"},
+      {w:"コップ", r:"こっぷ", e:"🥛", cat:"食器"},
+      {w:"おはし", r:"おはし", e:"🥢", cat:"食器"},
+      {w:"スプーン", r:"すぷーん", e:"🥄", cat:"食器"},
+      {w:"ゆのみ", r:"ゆのみ", e:"🍵", cat:"食器"},
+      {w:"めがね", r:"めがね", e:"👓", cat:"身のまわり"},
+      {w:"とけい", r:"とけい", e:"🕐", cat:"身のまわり"},
+      {w:"かさ", r:"かさ", e:"☂️", cat:"身のまわり"},
+  ]},
+  { id:"tabemono", name:"たべもの", emo:"🍙", words:[
+      {w:"おにぎり", r:"おにぎり", e:"🍙", cat:"たべもの"},
+      {w:"パン", r:"ぱん", e:"🍞", cat:"たべもの"},
+      {w:"りんご", r:"りんご", e:"🍎", cat:"くだもの"},
+      {w:"バナナ", r:"ばなな", e:"🍌", cat:"くだもの"},
+      {w:"たまご", r:"たまご", e:"🥚", cat:"たべもの"},
+      {w:"さかな", r:"さかな", e:"🐟", cat:"たべもの"},
+      {w:"みかん", r:"みかん", e:"🍊", cat:"くだもの"},
+      {w:"おちゃ", r:"おちゃ", e:"🍵", cat:"のみもの"},
+  ]},
+  { id:"karada", name:"からだ", emo:"✋", words:[
+      {w:"め", r:"め", e:"👁️", cat:"からだ"},
+      {w:"みみ", r:"みみ", e:"👂", cat:"からだ"},
+      {w:"はな", r:"はな", e:"👃", cat:"からだ"},
+      {w:"くち", r:"くち", e:"👄", cat:"からだ"},
+      {w:"て", r:"て", e:"✋", cat:"からだ"},
+      {w:"あし", r:"あし", e:"🦶", cat:"からだ"},
+      {w:"は", r:"は", e:"🦷", cat:"からだ"},
+      {w:"かみのけ", r:"かみのけ", e:"💇", cat:"からだ"},
+  ]},
+  { id:"seikatsu", name:"くらし", emo:"🏠", words:[
+      {w:"テレビ", r:"てれび", e:"📺", cat:"くらし"},
+      {w:"でんわ", r:"でんわ", e:"📞", cat:"くらし"},
+      {w:"とけい", r:"とけい", e:"⏰", cat:"くらし"},
+      {w:"ベッド", r:"べっど", e:"🛏️", cat:"くらし"},
+      {w:"いす", r:"いす", e:"🪑", cat:"くらし"},
+      {w:"ドア", r:"どあ", e:"🚪", cat:"くらし"},
+      {w:"はブラシ", r:"はぶらし", e:"🪥", cat:"くらし"},
+      {w:"せっけん", r:"せっけん", e:"🧼", cat:"くらし"},
+  ]},
+  { id:"doubutsu", name:"いきもの・しぜん", emo:"🐶", words:[
+      {w:"いぬ", r:"いぬ", e:"🐶", cat:"いきもの"},
+      {w:"ねこ", r:"ねこ", e:"🐱", cat:"いきもの"},
+      {w:"とり", r:"とり", e:"🐦", cat:"いきもの"},
+      {w:"うま", r:"うま", e:"🐴", cat:"いきもの"},
+      {w:"はな", r:"はな", e:"🌸", cat:"しぜん"},
+      {w:"き", r:"き", e:"🌳", cat:"しぜん"},
+      {w:"つき", r:"つき", e:"🌙", cat:"しぜん"},
+      {w:"たいよう", r:"たいよう", e:"☀️", cat:"しぜん"},
+  ]},
+  { id:"hito", name:"人物・かぞく", emo:"👨‍👩‍👧", words:[
+      {w:"おとうさん", r:"おとうさん", e:"👴", cat:"かぞく"},
+      {w:"おかあさん", r:"おかあさん", e:"👵", cat:"かぞく"},
+      {w:"あかちゃん", r:"あかちゃん", e:"👶", cat:"かぞく"},
+      {w:"おとこのこ", r:"おとこのこ", e:"👦", cat:"ひと"},
+      {w:"おんなのこ", r:"おんなのこ", e:"👧", cat:"ひと"},
+  ]},
+];
+
+/* ---- 追加した写真（localStorageに保存） ---- */
+function loadCustom(){
+  try{ return JSON.parse(localStorage.getItem("kr_custom")||"[]"); }
+  catch(e){ return []; }
+}
+function saveCustom(arr){ localStorage.setItem("kr_custom", JSON.stringify(arr)); }
+
+/* ---- 実際に使うカテゴリ（基本＋写真を合体） ---- */
+function effectiveCategories(){
+  // 基本カテゴリをコピー
+  const cats = BASE_CATEGORIES.map(c=>({id:c.id, name:c.name, emo:c.emo, words:c.words.slice()}));
+  const byId = Object.fromEntries(cats.map(c=>[c.id,c]));
+  loadCustom().forEach(item=>{
+    const target = byId[item.catId] || byId["hito"];
+    target.words.push({w:item.w, r:item.r, e:"🖼️", img:item.img, cat:target.name, _id:item.id});
+  });
+  return cats;
+}
+
+/* ---- 設定 ---- */
+const settings = {
+  count: +localStorage.getItem("kr_count") || 3,
+  label: localStorage.getItem("kr_label") || "on",
+  rate: +localStorage.getItem("kr_rate") || 0.85,
+  font: +localStorage.getItem("kr_font") || 1,
+};
+/* 文字の大きさ（画面全体を拡大）。WebKit/iPad Safari・Documentsで有効 */
+function applyFont(){ document.documentElement.style.zoom = settings.font; }
+applyFont();
+
+/* ---- 音声（日本語TTS） ---- */
+let jaVoice = null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices();
+  jaVoice = vs.find(v=>v.lang==="ja-JP") || vs.find(v=>v.lang && v.lang.startsWith("ja")) || null;
+}
+if("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speak(text){
+  if(!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang="ja-JP"; u.rate=settings.rate; u.pitch=1;
+  if(jaVoice) u.voice=jaVoice;
+  speechSynthesis.speak(u);
+}
+
+/* ---- 便利関数 ---- */
+const $ = id => document.getElementById(id);
+const shuffle = a => a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]);
+function visualHTML(item){
+  if(item.img) return `<img class="pic" src="${item.img}" alt="">`;
+  return `<span class="emo-char">${item.e}</span>`;
+}
+
+/* ---- 画面遷移 ---- */
+let mode=null, catWords=[], queue=[], idx=0, answered=false;
+function show(sec){
+  ["home","catsel"].forEach(s=>$(s).classList.add("hide"));
+  document.querySelectorAll(".stage").forEach(s=>s.classList.remove("on"));
+  if(sec==="home") $("home").classList.remove("hide");
+  else if(sec==="catsel") $("catsel").classList.remove("hide");
+  else $(sec).classList.add("on");
+}
+function goHome(){ speechSynthesis.cancel(); mode=null; show("home"); }
+
+/* ---- モード選択 → カテゴリ選択 ---- */
+document.querySelectorAll(".mode").forEach(btn=>{
+  btn.onclick = ()=>{ mode=btn.dataset.mode; openCatSel(); };
+});
+function openCatSel(){
+  const cats = effectiveCategories();
+  const grid = $("catGrid"); grid.innerHTML="";
+  const total = cats.reduce((s,c)=>s+c.words.length,0);
+
+  const all=document.createElement("button");
+  all.className="cat";
+  all.innerHTML=`<div class="emo">🌈</div><div class="nm">ぜんぶ</div><div class="ct">${total}こ</div>`;
+  all.onclick=()=>startTraining(cats.flatMap(c=>c.words));
+  grid.appendChild(all);
+
+  cats.forEach(c=>{
+    const b=document.createElement("button");
+    const few = c.words.length < 2;            // 2こ未満は選べない
+    b.className="cat"+(few?" disabled":"");
+    b.innerHTML=`<div class="emo">${c.emo}</div><div class="nm">${c.name}</div><div class="ct">${c.words.length}こ</div>`;
+    if(!few) b.onclick=()=>startTraining(c.words.slice());
+    grid.appendChild(b);
+  });
+  show("catsel");
+}
+
+/* ---- 出題リスト ---- */
+function startTraining(words){
+  catWords=words; queue=shuffle(words.slice()); idx=0;
+  if(mode==="point"||mode==="match") renderChoice();
+  else if(mode==="repeat") renderRepeat();
+  else if(mode==="name") renderName();
+}
+
+/* ===================== ゆびさし / 文字あわせ ===================== */
+function renderChoice(){
+  answered=false; show("choiceStage");
+  const target=queue[idx];
+  const n=Math.min(settings.count, catWords.length);
+  const pool=shuffle(catWords.filter(w=>w.w!==target.w));
+  const opts=shuffle([target, ...pool.slice(0,n-1)]);
+
+  if(mode==="match"){
+    $("cpSay").textContent="おなじ ことばの 絵は どれ？";
+    $("cpWord").textContent=target.w;
+  }else{
+    $("cpSay").textContent="🔊 きこえた ことばの 絵は どれ？";
+    $("cpWord").textContent="";
+  }
+  $("cpSpeak").classList.remove("hide");
+
+  const box=$("cpChoices"); box.className="choices c"+n; box.innerHTML="";
+  opts.forEach(o=>{
+    const c=document.createElement("button");
+    c.className="choice";
+    c.innerHTML=`<div class="visual">${visualHTML(o)}</div>`+
+                (settings.label==="on"?`<div class="lbl">${o.w}</div>`:"");
+    c.onclick=()=>pickChoice(c,o,target);
+    box.appendChild(c);
+  });
+  $("cpFb").className="feedback"; $("cpFb").textContent="";
+  $("cpNext").classList.add("hide");
+  $("cpCount").textContent=`${idx+1} / ${queue.length}`;
+  setTimeout(()=>speak(target.r),350);
+}
+$("cpSpeak").onclick=()=>speak(queue[idx].r);
+function pickChoice(el,chosen,target){
+  if(answered) return;
+  if(chosen.w===target.w){
+    answered=true; el.classList.add("correct");
+    const fb=$("cpFb"); fb.className="feedback good"; fb.textContent="◯ せいかい！";
+    speak(target.r+"、せいかい");
+    $("cpNext").classList.remove("hide");
+  }else{
+    el.classList.add("wrong");
+    const fb=$("cpFb"); fb.className="feedback retry"; fb.textContent="もう いちど きいてみましょう";
+    speak("もういちど"); setTimeout(()=>speak(target.r),900);
+  }
+}
+$("cpNext").onclick=()=>{ idx++; if(idx>=queue.length){finishRound();return;} renderChoice(); };
+
+/* ===================== まねしていう ===================== */
+function renderRepeat(){
+  show("repeatStage");
+  const t=queue[idx];
+  $("rpEmo").innerHTML=visualHTML(t);
+  $("rpWord").textContent=t.w;
+  $("rpCount").textContent=`${idx+1} / ${queue.length}`;
+  setTimeout(()=>speak(t.r),350);
+}
+$("rpSpeak").onclick=()=>speak(queue[idx].r);
+$("rpNext").onclick=()=>{ idx++; if(idx>=queue.length){finishRound();return;} renderRepeat(); };
+
+/* ===================== 名前をいう ===================== */
+function renderName(){
+  show("nameStage");
+  const t=queue[idx];
+  $("nmEmo").innerHTML=visualHTML(t);
+  $("nmCount").textContent=`${idx+1} / ${queue.length}`;
+  $("nmAnswer").className="answer"; $("nmAnswer").textContent="";
+  $("nmHintbox").className="hintbox"; $("nmHintbox").textContent="";
+}
+document.querySelectorAll("#nameStage .hint").forEach(b=>{
+  b.onclick=()=>{
+    const t=queue[idx]; const hb=$("nmHintbox");
+    if(b.dataset.h==="1"){ hb.className="hintbox on"; hb.textContent=`なかま：「${t.cat}」のものです`; speak(t.cat+"の、なかまです"); }
+    else if(b.dataset.h==="2"){ hb.className="hintbox on"; const f=t.w.charAt(0); hb.textContent=`さいしょの音：「${f}」…`; speak(f); }
+    else if(b.dataset.h==="3"){ hb.className="hintbox on"; hb.textContent=`文字：${t.w}`; }
+    else if(b.dataset.h==="ans"){ $("nmAnswer").className="answer on"; $("nmAnswer").textContent=t.w; speak(t.r); }
+  };
+});
+$("nmNext").onclick=()=>{ idx++; if(idx>=queue.length){finishRound();return;} renderName(); };
+
+/* ---- ラウンド終了 ---- */
+function finishRound(){
+  speak("よく できました。おつかれさまでした");
+  show("home");
+  const lead=document.querySelector("#home .lead");
+  lead.textContent="🎉 よくできました！ もう いちど やりますか？";
+  setTimeout(()=>{ lead.textContent="今日やることを、ひとつ えらんでください"; },6000);
+}
+
+/* ===================== 写真をついか ===================== */
+const PICK_CATS = BASE_CATEGORIES.map(c=>({id:c.id,name:c.name}));
+let pendingImg=null, pickedCatId="hito";
+
+function openAdd(){
+  pendingImg=null; pickedCatId="hito";
+  $("photoInput").value="";
+  $("photoName").value="";
+  $("photoPreview").style.display="none";
+  $("fileFake").textContent="📷 ここを おして 写真を えらぶ";
+  // なかまボタン
+  const row=$("catPick"); row.innerHTML="";
+  PICK_CATS.forEach(c=>{
+    const b=document.createElement("button");
+    b.textContent=c.name; b.dataset.id=c.id;
+    if(c.id==="hito") b.classList.add("sel");
+    b.onclick=()=>{ pickedCatId=c.id; [...row.children].forEach(x=>x.classList.toggle("sel",x.dataset.id===c.id)); };
+    row.appendChild(b);
+  });
+  refreshSaveBtn();
+  show("addStage");
+}
+$("addPhotoBtn").onclick=openAdd;
+$("addMoreBtn").onclick=openAdd;
+
+/* 写真を縮小して保存サイズを小さく（最大480px・JPEG） */
+$("photoInput").onchange=e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=480; let {width:w,height:h}=img;
+      if(w>h && w>max){ h=h*max/w; w=max; } else if(h>=w && h>max){ w=w*max/h; h=max; }
+      const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+      cv.getContext("2d").drawImage(img,0,0,w,h);
+      pendingImg=cv.toDataURL("image/jpeg",0.82);
+      const pv=$("photoPreview"); pv.src=pendingImg; pv.style.display="block";
+      $("fileFake").textContent="✅ 写真を えらびました（べつの写真にする時は ここを おす）";
+      refreshSaveBtn();
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+$("photoName").oninput=refreshSaveBtn;
+function refreshSaveBtn(){
+  $("savedPhoto").disabled = !(pendingImg && $("photoName").value.trim());
+}
+$("savedPhoto").onclick=()=>{
+  const name=$("photoName").value.trim();
+  if(!pendingImg || !name) return;
+  const arr=loadCustom();
+  arr.push({id:"c"+Date.now(), w:name, r:name, img:pendingImg, catId:pickedCatId});
+  try{ saveCustom(arr); }
+  catch(err){ alert("ほぞんの ようりょうが いっぱいです。古い写真を けしてください。"); return; }
+  speak(name+"を、ついかしました");
+  openManage();
+};
+
+/* ===================== 管理 ===================== */
+function openManage(){
+  const arr=loadCustom();
+  const list=$("mList"); list.innerHTML="";
+  $("manageLead").textContent = arr.length ? `ついかした 写真（${arr.length}まい）` : "まだ 写真は ありません";
+  const catName=Object.fromEntries(PICK_CATS.map(c=>[c.id,c.name]));
+  arr.slice().reverse().forEach(item=>{
+    const row=document.createElement("div"); row.className="mitem";
+    row.innerHTML=`<img src="${item.img}" alt="">
+      <div class="minfo"><div class="mw">${item.w}</div><div class="mc">${catName[item.catId]||"人物・かぞく"}</div></div>
+      <button class="del">けす</button>`;
+    row.querySelector(".del").onclick=()=>{
+      if(!confirm(`「${item.w}」を けしますか？`)) return;
+      saveCustom(loadCustom().filter(x=>x.id!==item.id));
+      openManage();
+    };
+    list.appendChild(row);
+  });
+  show("manageStage");
+}
+$("manageBtn").onclick=openManage;
+
+/* ===================== 設定パネル ===================== */
+$("setBtn").onclick=()=>$("panel").classList.add("on");
+function closePanel(){ $("panel").classList.remove("on"); }
+$("homeBtn").onclick=goHome;
+function syncSeg(id,val){ document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle("sel",b.dataset.v==String(val))); }
+syncSeg("segCount",settings.count); syncSeg("segLabel",settings.label); syncSeg("segRate",settings.rate); syncSeg("segFont",settings.font);
+$("segCount").onclick=e=>{ if(e.target.dataset.v){ settings.count=+e.target.dataset.v; localStorage.setItem("kr_count",settings.count); syncSeg("segCount",settings.count);} };
+$("segLabel").onclick=e=>{ if(e.target.dataset.v){ settings.label=e.target.dataset.v; localStorage.setItem("kr_label",settings.label); syncSeg("segLabel",settings.label);} };
+$("segRate").onclick =e=>{ if(e.target.dataset.v){ settings.rate=+e.target.dataset.v; localStorage.setItem("kr_rate",settings.rate); syncSeg("segRate",settings.rate); speak("これくらいの はやさです");} };
+$("segFont").onclick =e=>{ if(e.target.dataset.v){ settings.font=+e.target.dataset.v; localStorage.setItem("kr_font",settings.font); syncSeg("segFont",settings.font); applyFont();} };
+
+/* 初回タップで音声を有効化（自動再生対策） */
+let unlocked=false;
+document.body.addEventListener("click",()=>{
+  if(unlocked||!("speechSynthesis" in window)) return;
+  const u=new SpeechSynthesisUtterance(" "); u.volume=0; speechSynthesis.speak(u); unlocked=true;
+});
+</script>
+</body>
+</html>
